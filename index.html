@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pear Media — AI Text & Image Studio</title>
+    <meta name="description" content="AI-powered text enhancement and image generation tool. Enhance your prompts and generate stunning images with multiple AI APIs.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍐</text></svg>">
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="bg-animation">
+        <div class="bg-orb bg-orb-1"></div>
+        <div class="bg-orb bg-orb-2"></div>
+        <div class="bg-orb bg-orb-3"></div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>⚙️ API Configuration</h2>
+                <button class="modal-close" onclick="closeSettings()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="api-config-group">
+                    <label for="hfApiKey">
+                        <span class="api-icon">🤗</span> Hugging Face API Token
+                        <span class="badge badge-required">Required</span>
+                    </label>
+                    <input type="password" id="hfApiKey" placeholder="hf_xxxxxxxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+                    <p class="api-hint">Get your free token at <a href="https://huggingface.co/settings/tokens" target="_blank">huggingface.co/settings/tokens</a></p>
+                </div>
+                <div class="api-config-group">
+                    <label for="cohereApiKey">
+                        <span class="api-icon">🧠</span> Cohere API Key
+                        <span class="badge badge-optional">Optional</span>
+                    </label>
+                    <input type="password" id="cohereApiKey" placeholder="xxxxxxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+                    <p class="api-hint">Get your free key at <a href="https://dashboard.cohere.com/api-keys" target="_blank">dashboard.cohere.com</a></p>
+                </div>
+                <div class="api-config-group">
+                    <label for="stabilityApiKey">
+                        <span class="api-icon">🎨</span> Stability AI API Key
+                        <span class="badge badge-optional">Optional</span>
+                    </label>
+                    <input type="password" id="stabilityApiKey" placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+                    <p class="api-hint">Get your free key at <a href="https://platform.stability.ai/account/keys" target="_blank">platform.stability.ai</a></p>
+                </div>
+                <button class="btn btn-primary btn-full" onclick="saveSettings()">
+                    <span>💾</span> Save Configuration
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo">
+                <span class="logo-icon">🍐</span>
+                <span class="logo-text">Pear Media</span>
+                <span class="logo-badge">AI Studio</span>
+            </div>
+            <nav class="header-nav">
+                <div class="api-status" id="apiStatus">
+                    <span class="status-dot status-dot-inactive"></span>
+                    <span>No API Keys</span>
+                </div>
+                <button class="btn btn-glass" onclick="openSettings()">
+                    <span>⚙️</span> Settings
+                </button>
+            </nav>
+        </header>
+
+        <!-- Tab Navigation -->
+        <div class="tab-container">
+            <button class="tab-btn active" id="tabText" onclick="switchTab('text')">
+                <span class="tab-icon">✍️</span>
+                <span class="tab-label">Text to Image</span>
+                <span class="tab-desc">Enhance prompts & generate images</span>
+            </button>
+            <button class="tab-btn" id="tabImage" onclick="switchTab('image')">
+                <span class="tab-icon">🖼️</span>
+                <span class="tab-label">Image Analysis</span>
+                <span class="tab-desc">Analyze & create variations</span>
+            </button>
+        </div>
+
+        <!-- Text Workflow Panel -->
+        <div class="workflow-panel active" id="panelText">
+            <!-- Step 1: Input -->
+            <div class="step-card" id="textStep1">
+                <div class="step-header">
+                    <div class="step-number">1</div>
+                    <div>
+                        <h3>Enter Your Prompt</h3>
+                        <p>Describe the image you want to create</p>
+                    </div>
+                </div>
+                <div class="step-body">
+                    <textarea id="userPrompt" placeholder="e.g., A serene Japanese garden with cherry blossoms falling gently onto a koi pond at sunset..." rows="4"></textarea>
+                    <div class="input-actions">
+                        <div class="char-count"><span id="charCount">0</span>/500</div>
+                        <button class="btn btn-primary" id="enhanceBtn" onclick="enhancePrompt()">
+                            <span class="btn-spinner" id="enhanceSpinner"></span>
+                            <span>🪄 Enhance Prompt</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Enhanced Prompt -->
+            <div class="step-card hidden" id="textStep2">
+                <div class="step-header">
+                    <div class="step-number">2</div>
+                    <div>
+                        <h3>Enhanced Prompt</h3>
+                        <p>Review the AI-enhanced version of your prompt</p>
+                    </div>
+                </div>
+                <div class="step-body">
+                    <div class="analysis-card" id="analysisCard">
+                        <div class="analysis-grid">
+                            <div class="analysis-item">
+                                <span class="analysis-label">Tone</span>
+                                <span class="analysis-value" id="analysisTone">—</span>
+                            </div>
+                            <div class="analysis-item">
+                                <span class="analysis-label">Intent</span>
+                                <span class="analysis-value" id="analysisIntent">—</span>
+                            </div>
+                            <div class="analysis-item">
+                                <span class="analysis-label">Style</span>
+                                <span class="analysis-value" id="analysisStyle">—</span>
+                            </div>
+                            <div class="analysis-item">
+                                <span class="analysis-label">Complexity</span>
+                                <span class="analysis-value" id="analysisComplexity">—</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="enhanced-prompt-box">
+                        <div class="enhanced-label">Enhanced Prompt</div>
+                        <textarea id="enhancedPrompt" rows="5"></textarea>
+                    </div>
+                    <div class="prompt-actions">
+                        <button class="btn btn-ghost" onclick="resetTextWorkflow()">
+                            <span>↩️</span> Start Over
+                        </button>
+                        <button class="btn btn-primary" id="generateBtn" onclick="generateImage()">
+                            <span class="btn-spinner" id="generateSpinner"></span>
+                            <span>🎨 Generate Image</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Generated Image -->
+            <div class="step-card hidden" id="textStep3">
+                <div class="step-header">
+                    <div class="step-number">3</div>
+                    <div>
+                        <h3>Generated Image</h3>
+                        <p>Your AI-generated masterpiece</p>
+                    </div>
+                </div>
+                <div class="step-body">
+                    <div class="image-result" id="imageResult">
+                        <div class="image-loading" id="imageLoading">
+                            <div class="pulse-loader"></div>
+                            <p>Creating your image...</p>
+                            <p class="loading-sub">This may take 30–60 seconds</p>
+                        </div>
+                        <img id="generatedImage" class="hidden" alt="AI Generated Image">
+                    </div>
+                    <div class="result-actions hidden" id="resultActions">
+                        <button class="btn btn-ghost" onclick="resetTextWorkflow()">
+                            <span>🔄</span> New Prompt
+                        </button>
+                        <button class="btn btn-ghost" onclick="downloadImage()">
+                            <span>💾</span> Download
+                        </button>
+                        <button class="btn btn-primary" onclick="generateVariation()">
+                            <span class="btn-spinner" id="variationSpinner"></span>
+                            <span>✨ Generate Variation</span>
+                        </button>
+                    </div>
+                    <!-- Variations Gallery -->
+                    <div class="variations-gallery hidden" id="variationsGallery">
+                        <h4>🎭 Image Variations</h4>
+                        <div class="gallery-grid" id="galleryGrid"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Image Workflow Panel -->
+        <div class="workflow-panel" id="panelImage">
+            <!-- Step 1: Upload -->
+            <div class="step-card" id="imgStep1">
+                <div class="step-header">
+                    <div class="step-number">1</div>
+                    <div>
+                        <h3>Upload an Image</h3>
+                        <p>Upload or paste a URL for AI analysis</p>
+                    </div>
+                </div>
+                <div class="step-body">
+                    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('imageUpload').click()">
+                        <input type="file" id="imageUpload" accept="image/*" hidden onchange="handleImageUpload(event)">
+                        <div class="upload-icon">📁</div>
+                        <p class="upload-text">Drop image here or click to browse</p>
+                        <p class="upload-hint">Supports JPG, PNG, WEBP (max 10MB)</p>
+                    </div>
+                    <div class="divider-or"><span>OR</span></div>
+                    <div class="url-input-group">
+                        <input type="url" id="imageUrl" placeholder="Paste image URL here...">
+                        <button class="btn btn-primary" onclick="loadImageFromUrl()">Load</button>
+                    </div>
+                    <div class="image-preview hidden" id="imagePreview">
+                        <img id="previewImg" alt="Uploaded preview">
+                        <button class="btn btn-icon btn-remove" onclick="removeImage()">✕</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Analysis -->
+            <div class="step-card hidden" id="imgStep2">
+                <div class="step-header">
+                    <div class="step-number">2</div>
+                    <div>
+                        <h3>Image Analysis</h3>
+                        <p>AI-powered understanding of your image</p>
+                    </div>
+                </div>
+                <div class="step-body">
+                    <div class="analysis-loading" id="analysisLoading">
+                        <div class="pulse-loader"></div>
+                        <p>Analyzing image...</p>
+                    </div>
+                    <div class="analysis-results hidden" id="analysisResults">
+                        <div class="analysis-section">
+                            <h4>📝 Caption</h4>
+                            <p id="imgCaption" class="caption-text">—</p>
+                        </div>
+                        <div class="analysis-section">
+                            <h4>🏷️ Detected Objects & Themes</h4>
+                            <div class="tag-cloud" id="imgTags"></div>
+                        </div>
+                        <div class="analysis-section">
+                            <h4>🎨 Style Analysis</h4>
+                            <p id="imgStyle" class="style-text">—</p>
+                        </div>
+                    </div>
+                    <div class="prompt-actions hidden" id="imgAnalysisActions">
+                        <button class="btn btn-ghost" onclick="resetImageWorkflow()">
+                            <span>↩️</span> Start Over
+                        </button>
+                        <button class="btn btn-primary" id="imgVariationBtn" onclick="generateImageVariations()">
+                            <span class="btn-spinner" id="imgVariationSpinner"></span>
+                            <span>✨ Generate Variations</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Variations -->
+            <div class="step-card hidden" id="imgStep3">
+                <div class="step-header">
+                    <div class="step-number">3</div>
+                    <div>
+                        <h3>Image Variations</h3>
+                        <p>AI-generated variations based on your image</p>
+                    </div>
+                </div>
+                <div class="step-body">
+                    <div class="image-loading" id="imgVarLoading">
+                        <div class="pulse-loader"></div>
+                        <p>Generating variations...</p>
+                        <p class="loading-sub">This may take 30–60 seconds</p>
+                    </div>
+                    <div class="variations-gallery hidden" id="imgVariationsGallery">
+                        <div class="gallery-grid" id="imgGalleryGrid"></div>
+                    </div>
+                    <div class="prompt-actions hidden" id="imgVarActions">
+                        <button class="btn btn-ghost" onclick="resetImageWorkflow()">
+                            <span>🔄</span> Start Over
+                        </button>
+                        <button class="btn btn-primary" onclick="generateMoreVariations()">
+                            <span class="btn-spinner" id="moreVarSpinner"></span>
+                            <span>✨ Generate More</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Container -->
+        <div id="toastContainer" class="toast-container"></div>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>Built with 🍐 by <strong>Pear Media</strong> • Powered by Hugging Face, Cohere & Stability AI</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
