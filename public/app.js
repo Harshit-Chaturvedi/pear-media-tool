@@ -340,6 +340,7 @@ function processImageFile(file) {
         showToast('error', 'Image must be under 10MB.');
         return;
     }
+    const reader = new FileReader();
     reader.onload = async (e) => {
         const originalBase64 = e.target.result;
         state.uploadedImageBase64 = await compressImage(originalBase64);
