@@ -81,16 +81,39 @@ app.post('/api/analyze-text', async (req, res) => {
     if (!prompt) return res.status(400).json({ error: 'Prompt is required' });
 
     try {
-        const [tone, intent, style, complexity] = await Promise.all([
-            hfZeroShot(prompt, ['formal', 'casual', 'poetic', 'technical', 'humorous', 'dramatic', 'whimsical', 'dark', 'serene']),
-            hfZeroShot(prompt, ['landscape', 'portrait', 'abstract', 'fantasy', 'realistic', 'surreal', 'sci-fi', 'nature', 'urban']),
-            hfZeroShot(prompt, ['photorealistic', 'oil painting', 'watercolor', 'digital art', 'anime', 'sketch', 'minimalist', 'vintage', '3D render']),
-            hfZeroShot(prompt, ['simple', 'moderate', 'complex', 'highly detailed']),
-        ]);
+        // Use Cohere for high-speed, multi-factor analysis in one pass
+        if (API_KEYS.cohere) {
+            const analysisPrompt = `Analyze this image prompt: "${prompt}". 
+            Respond with a JSON object containing:
+            - tone (e.g., whimsy, formal, dramatic)
+            - intent (e.g., landscape, portrait, abstract)
+            - style (e.g., oil painting, photorealistic, 3D render)
+            - complexity (simple, moderate, or complex)
+            Return ONLY the JSON.`;
 
-        res.json({ tone, intent, style, complexity });
+            const response = await fetch('https://api.cohere.ai/v1/chat', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${API_KEYS.cohere}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: analysisPrompt,
+                    model: 'command-r-plus-08-2024',
+                    max_tokens: 150,
+                    temperature: 0,
+                }),
+            });
+
+            const data = await response.json();
+            const jsonMatch = data.text.match(/\{[\s\S]*\}/)?.[0];
+            if (jsonMatch) {
+                return res.json(JSON.parse(jsonMatch));
+            }
+        }
+        res.json(fallbackAnalysis(prompt));
     } catch (err) {
-        console.warn('Zero-shot failed, using fallback:', err.message);
+        console.warn('Analysis optimized failed, using fallback:', err.message);
         res.json(fallbackAnalysis(prompt));
     }
 });

@@ -143,38 +143,45 @@ async function enhancePrompt() {
     const btn = document.getElementById('enhanceBtn');
     setLoading(btn, true);
 
-    try {
-        // Run analysis and enhancement in parallel via backend
-        const [analysisResp, enhanceResp] = await Promise.all([
-            fetch('/api/analyze-text', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt }),
-            }),
-            fetch('/api/enhance-text', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt }),
-            }),
-        ]);
+    // Initial placeholder for analysis
+    ['analysisTone', 'analysisIntent', 'analysisStyle', 'analysisComplexity'].forEach(id => {
+        document.getElementById(id).textContent = 'Analyzing...';
+    });
 
-        const analysis = await analysisResp.json();
+    // Start Analysis in background (don't wait for it yet)
+    const analysisPromise = fetch('/api/analyze-text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+    }).then(res => res.json()).catch(err => {
+        console.warn('Analysis background failed:', err);
+        return { tone: 'Neutral', intent: 'Creative', style: 'Artistic', complexity: 'Medium' };
+    });
+
+    try {
+        // Priority 1: Enhancement
+        const enhanceResp = await fetch('/api/enhance-text', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt }),
+        });
         const enhance = await enhanceResp.json();
 
-        // Fill in analysis
+        // Fill in enhanced prompt IMMEDIATELY
+        document.getElementById('enhancedPrompt').value = enhance.enhanced;
+
+        // Show step 2 IMMEDIATELY
+        document.getElementById('textStep2').classList.remove('hidden');
+        document.getElementById('textStep2').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        showToast('success', `Prompt enhanced via ${enhance.provider}!`);
+
+        // Wait for analysis to catch up
+        const analysis = await analysisPromise;
         document.getElementById('analysisTone').textContent = capitalize(analysis.tone || 'Neutral');
         document.getElementById('analysisIntent').textContent = capitalize(analysis.intent || 'Creative');
         document.getElementById('analysisStyle').textContent = capitalize(analysis.style || 'Artistic');
         document.getElementById('analysisComplexity').textContent = capitalize(analysis.complexity || 'Medium');
 
-        // Fill in enhanced prompt
-        document.getElementById('enhancedPrompt').value = enhance.enhanced;
-
-        // Show step 2
-        document.getElementById('textStep2').classList.remove('hidden');
-        document.getElementById('textStep2').scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-        showToast('success', `Prompt enhanced via ${enhance.provider}!`);
     } catch (err) {
         console.error('Enhancement error:', err);
         showToast('error', `Enhancement failed: ${err.message}`);
