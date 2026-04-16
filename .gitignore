@@ -10,3 +10,10 @@ desktop.ini
 # Misc
 *.log
 node_modules/
+.env
+test_*.js
+*.png
+*.webp
+*.md
+!README.md
+!walkthrough.md

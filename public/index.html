@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pear Media — AI Text & Image Studio</title>
-    <meta name="description" content="AI-powered text enhancement and image generation tool. Enhance your prompts and generate stunning images with multiple AI APIs.">
+    <meta name="description" content="AI-powered text enhancement and image generation tool. Enhance your prompts and generate stunning images.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -19,45 +19,6 @@
         <div class="bg-orb bg-orb-3"></div>
     </div>
 
-    <!-- Settings Modal -->
-    <div id="settingsModal" class="modal-overlay">
-        <div class="modal">
-            <div class="modal-header">
-                <h2>⚙️ API Configuration</h2>
-                <button class="modal-close" onclick="closeSettings()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="api-config-group">
-                    <label for="hfApiKey">
-                        <span class="api-icon">🤗</span> Hugging Face API Token
-                        <span class="badge badge-required">Required</span>
-                    </label>
-                    <input type="password" id="hfApiKey" placeholder="hf_xxxxxxxxxxxxxxxxxxxxxxxxx" autocomplete="off">
-                    <p class="api-hint">Get your free token at <a href="https://huggingface.co/settings/tokens" target="_blank">huggingface.co/settings/tokens</a></p>
-                </div>
-                <div class="api-config-group">
-                    <label for="cohereApiKey">
-                        <span class="api-icon">🧠</span> Cohere API Key
-                        <span class="badge badge-optional">Optional</span>
-                    </label>
-                    <input type="password" id="cohereApiKey" placeholder="xxxxxxxxxxxxxxxxxxxxxxxx" autocomplete="off">
-                    <p class="api-hint">Get your free key at <a href="https://dashboard.cohere.com/api-keys" target="_blank">dashboard.cohere.com</a></p>
-                </div>
-                <div class="api-config-group">
-                    <label for="stabilityApiKey">
-                        <span class="api-icon">🎨</span> Stability AI API Key
-                        <span class="badge badge-optional">Optional</span>
-                    </label>
-                    <input type="password" id="stabilityApiKey" placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxx" autocomplete="off">
-                    <p class="api-hint">Get your free key at <a href="https://platform.stability.ai/account/keys" target="_blank">platform.stability.ai</a></p>
-                </div>
-                <button class="btn btn-primary btn-full" onclick="saveSettings()">
-                    <span>💾</span> Save Configuration
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- Main App -->
     <div class="app-container">
         <!-- Header -->
@@ -69,12 +30,9 @@
             </div>
             <nav class="header-nav">
                 <div class="api-status" id="apiStatus">
-                    <span class="status-dot status-dot-inactive"></span>
-                    <span>No API Keys</span>
+                    <span class="status-dot status-dot-active"></span>
+                    <span>System Online</span>
                 </div>
-                <button class="btn btn-glass" onclick="openSettings()">
-                    <span>⚙️</span> Settings
-                </button>
             </nav>
         </header>
 
