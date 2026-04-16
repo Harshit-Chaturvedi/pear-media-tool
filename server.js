@@ -126,29 +126,25 @@ app.post('/api/generate-image', async (req, res) => {
     if (!prompt) return res.status(400).json({ error: 'Prompt is required' });
 
     try {
-        // Try Stability AI first (higher quality)
+        // Try Stability AI first (higher quality) - but skip on balance/auth errors
         if (API_KEYS.stability) {
             try {
                 const imageBuffer = await stabilityGenerate(prompt);
                 res.set('Content-Type', 'image/png');
                 return res.send(imageBuffer);
             } catch (e) {
-                console.warn('Stability failed, falling back to HF:', e.message);
-                // If it's a 401/402, we should probably tell the user instead of falling back to a likely slower HF
-                if (e.message.includes('401') || e.message.includes('402')) {
-                    throw e; 
-                }
+                console.warn('Stability failed, falling back to HF FLUX:', e.message);
+                // Always fall through to HF - don't throw
             }
         }
 
-        // Fallback to HF
+        // Fallback to HF FLUX models (confirmed working)
         const imageBuffer = await hfImageGen(prompt);
         res.set('Content-Type', 'image/png');
         return res.send(imageBuffer);
     } catch (err) {
         console.error('Image generation error:', err);
-        const status = err.message.includes('401') ? 401 : err.message.includes('402') ? 402 : 500;
-        res.status(status).json({ error: err.message });
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -460,13 +456,12 @@ async function stabilityGenerate(prompt) {
 // =============================================
 async function hfImageGen(prompt) {
     const models = [
-        'stabilityai/sdxl-turbo', // 1-step generation (Fastest for Vercel)
-        'stabilityai/stable-diffusion-xl-base-1.0',
+        'black-forest-labs/FLUX.1-schnell', // Fast, confirmed working
+        'black-forest-labs/FLUX.1-dev',      // Higher quality fallback
     ];
 
     for (const model of models) {
         try {
-            const isTurbo = model.includes('turbo');
             const response = await fetchWithRetry(
                 `https://router.huggingface.co/hf-inference/models/${model}`,
                 {
@@ -477,12 +472,9 @@ async function hfImageGen(prompt) {
                     },
                     body: JSON.stringify({
                         inputs: prompt,
-                        parameters: isTurbo ? {
-                            num_inference_steps: 1, // Turbo only needs 1 step
+                        parameters: {
+                            num_inference_steps: 4,
                             guidance_scale: 0.0,
-                        } : {
-                            num_inference_steps: 25,
-                            guidance_scale: 7.5,
                         },
                     }),
                 }
@@ -492,7 +484,8 @@ async function hfImageGen(prompt) {
             if (contentType && contentType.includes('image')) {
                 return Buffer.from(await response.arrayBuffer());
             }
-            throw new Error('Non-image response');
+            const errText = await response.text();
+            throw new Error(`Non-image response from ${model}: ${errText.substring(0, 200)}`);
         } catch (e) {
             console.warn(`HF model ${model} failed:`, e.message);
             continue;
