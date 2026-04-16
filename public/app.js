@@ -217,8 +217,12 @@ async function generateImage() {
         });
 
         if (!response.ok) {
-            const errData = await response.json().catch(() => ({ error: 'Unknown error' }));
-            throw new Error(errData.error || `Server error: ${response.status}`);
+            let errorMsg = 'Generation failed';
+            if (response.status === 401) errorMsg = 'Invalid API Key. Please check your Vercel settings.';
+            if (response.status === 402) errorMsg = 'Insufficient Balance/Credits in your AI account.';
+            
+            const errData = await response.json().catch(() => ({ error: errorMsg }));
+            throw new Error(errData.error || errorMsg);
         }
 
         const blob = await response.blob();

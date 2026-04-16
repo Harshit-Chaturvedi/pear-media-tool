@@ -134,16 +134,21 @@ app.post('/api/generate-image', async (req, res) => {
                 return res.send(imageBuffer);
             } catch (e) {
                 console.warn('Stability failed, falling back to HF:', e.message);
+                // If it's a 401/402, we should probably tell the user instead of falling back to a likely slower HF
+                if (e.message.includes('401') || e.message.includes('402')) {
+                    throw e; 
+                }
             }
         }
 
         // Fallback to HF
         const imageBuffer = await hfImageGen(prompt);
         res.set('Content-Type', 'image/png');
-        res.send(imageBuffer);
+        return res.send(imageBuffer);
     } catch (err) {
         console.error('Image generation error:', err);
-        res.status(500).json({ error: err.message });
+        const status = err.message.includes('401') ? 401 : err.message.includes('402') ? 402 : 500;
+        res.status(status).json({ error: err.message });
     }
 });
 
@@ -434,7 +439,7 @@ async function stabilityGenerate(prompt) {
                 cfg_scale: 7,
                 height: 1024,
                 width: 1024,
-                steps: 30,
+                steps: 25, // Reduced from 30 for speed (Vercel 10s limit)
                 samples: 1,
             }),
         }
@@ -455,12 +460,13 @@ async function stabilityGenerate(prompt) {
 // =============================================
 async function hfImageGen(prompt) {
     const models = [
+        'stabilityai/sdxl-turbo', // 1-step generation (Fastest for Vercel)
         'stabilityai/stable-diffusion-xl-base-1.0',
-        'runwayml/stable-diffusion-v1-5',
     ];
 
     for (const model of models) {
         try {
+            const isTurbo = model.includes('turbo');
             const response = await fetchWithRetry(
                 `https://router.huggingface.co/hf-inference/models/${model}`,
                 {
@@ -471,8 +477,11 @@ async function hfImageGen(prompt) {
                     },
                     body: JSON.stringify({
                         inputs: prompt,
-                        parameters: {
-                            num_inference_steps: 30,
+                        parameters: isTurbo ? {
+                            num_inference_steps: 1, // Turbo only needs 1 step
+                            guidance_scale: 0.0,
+                        } : {
+                            num_inference_steps: 25,
                             guidance_scale: 7.5,
                         },
                     }),
