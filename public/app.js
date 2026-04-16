@@ -52,6 +52,51 @@ function capitalize(s) {
     return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+/**
+ * Compresses an image to stay within Vercel's 4.5MB payload limit.
+ * Resizes to max 1200px and uses 0.8 JPEG compression.
+ */
+function compressImage(base64Str) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            const MAX_WIDTH = 1200;
+            const MAX_HEIGHT = 1200;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+                if (width > MAX_WIDTH) {
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                }
+            } else {
+                if (height > MAX_HEIGHT) {
+                    width *= MAX_HEIGHT / height;
+                    height = MAX_HEIGHT;
+                }
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Export as compressed JPEG
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+            
+            const oldSize = (base64Str.length / 1024).toFixed(2);
+            const newSize = (compressedBase64.length / 1024).toFixed(2);
+            console.log(`Image optimized: ${oldSize}KB -> ${newSize}KB`);
+            
+            resolve(compressedBase64);
+        };
+        img.onerror = () => resolve(base64Str); // Fallback to original
+        img.src = base64Str;
+    });
+}
+
 // =============================================
 // Toast Notifications
 // =============================================
@@ -295,10 +340,10 @@ function processImageFile(file) {
         showToast('error', 'Image must be under 10MB.');
         return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        state.uploadedImageBase64 = e.target.result;
-        showImagePreview(e.target.result);
+    reader.onload = async (e) => {
+        const originalBase64 = e.target.result;
+        state.uploadedImageBase64 = await compressImage(originalBase64);
+        showImagePreview(state.uploadedImageBase64);
     };
     reader.readAsDataURL(file);
 }
@@ -311,15 +356,16 @@ function loadImageFromUrl() {
     }
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    img.onload = () => {
+    img.onload = async () => {
         const canvas = document.createElement('canvas');
         canvas.width = img.naturalWidth;
         canvas.height = img.naturalHeight;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0);
-        state.uploadedImageBase64 = canvas.toDataURL('image/png');
+        const originalBase64 = canvas.toDataURL('image/png');
+        state.uploadedImageBase64 = await compressImage(originalBase64);
         showImagePreview(state.uploadedImageBase64);
-        showToast('success', 'Image loaded from URL!');
+        showToast('success', 'Image loaded and optimized!');
     };
     img.onerror = () => {
         showToast('error', 'Could not load image. Try downloading and uploading instead.');
